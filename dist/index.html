@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#191c1a">
+<meta name="description" content="Orbit a floating geometric sphere and defend it against incoming waves. Expand from planar to three-dimensional defense.">
+<title>Phaseform — Tower Defense</title>
+<link rel="icon" href="mark.svg" type="image/svg+xml">
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="game">
+<header class="topbar">
+  <div class="brand"><img src="mark.svg" width="39" height="40" alt=""><span>PHASE<span class="brand-light">FORM</span></span></div>
+  <span class="brand-type">TOWER DEFENSE</span>
+  <nav aria-label="Game controls">
+    <button class="guide" id="guide" title="Field guide (H)"><i data-icon="book"></i><span>Field guide</span></button>
+    <span class="nav-separator"></span>
+    <button class="square" id="sound" aria-label="Mute sound" title="Mute sound (M)"><i data-icon="sound"></i></button>
+    <button class="square" id="pause" aria-label="Pause game" title="Pause game (Esc)"><i data-icon="pause"></i></button>
+  </nav>
+</header>
+<section class="arena" id="arena" aria-label="Defense field">
+  <canvas id="field" tabindex="0" aria-label="Orbital defense field. Drag or use the arrow keys to orbit. Scroll or pinch to zoom. Press R to reset the view. Tap a hostile to focus fire, or press F to cycle targets."></canvas>
+  <div class="hud">
+    <div class="location"><div class="sector"><i data-icon="sector"></i><span id="sector">SECTOR 01</span></div><h1 id="location">Equatorial Orbit</h1>
+    <div class="plane"><i data-icon="layers"></i><span id="plane">2D plane</span></div></div>
+    <div class="statistics" aria-label="Run statistics">
+      <div class="stat health"><span class="stat-label"><i data-icon="shield"></i>Integrity</span><strong><span id="health">100</span><small>%</small></strong><span class="segments" id="segments"></span></div>
+      <div class="stat"><span class="stat-label"><i data-icon="shard"></i>Shards</span><strong id="wallet">120</strong></div>
+      <div class="stat wave"><span class="stat-label"><i data-icon="wave"></i>Wave</span><strong><span id="wave">01</span><small> / 03</small></strong></div>
+    </div>
+  </div>
+  <div class="arena-bottom"><div class="phase-tag"><b></b><span id="phase">Build phase</span></div>
+  <div class="arena-actions"><button id="burst" class="burst" hidden><i data-icon="burst"></i><span id="burst-text">Pulse burst</span><kbd>E</kbd></button>
+  <button id="reset-view" class="speed" title="Reset camera view (R)" aria-label="Reset camera view"><i data-icon="resetView"></i><span>Reset view</span></button>
+  <button id="speed" class="speed" title="Change simulation speed" aria-label="Change simulation speed, currently 1 times"><i data-icon="speed"></i><span id="speed-text">1×</span></button></div></div>
+  <div id="toast" class="toast" role="status"></div>
+</section>
+<section class="console" aria-label="Upgrade and launch controls">
+<div class="upgrade-area">
+  <div class="panel-heading"><i data-icon="upgrade"></i><h2>Core upgrades</h2><span class="rule"></span></div>
+  <div class="upgrades">
+    <button id="upgrade-damage" class="card"><div class="card-art"><canvas data-art="damage" aria-hidden="true"></canvas></div><div class="card-main"><span class="level" id="lv-damage">LV. 01</span><h3>Pulse emitter</h3><div class="price" id="price-damage"></div></div></button>
+    <button id="upgrade-range" class="card"><div class="card-art"><canvas data-art="range" aria-hidden="true"></canvas></div><div class="card-main"><span class="level" id="lv-range">LV. 01</span><h3>Field radius</h3><div class="price" id="price-range"></div></div></button>
+    <button id="upgrade-axis" class="card locked"><div class="card-art"><canvas data-art="axis" aria-hidden="true"></canvas></div><div class="card-main"><span class="level" id="lv-axis">LOCKED</span><h3>Axis array</h3><div class="price" id="price-axis"></div></div></button>
+  </div>
+</div>
+<div class="launch-area"><div class="launch-label"><span id="next-label">Next wave</span><span class="incoming" id="incoming">7 hostiles</span></div><button id="launch" class="launch"><i data-icon="play"></i><span id="launch-text">Start wave</span><kbd>SPACE</kbd></button></div>
+</section>
+<footer><div class="key-hint"><i data-icon="orbit"></i><span>Drag to orbit</span></div><span class="foot-divider"></span><div class="key-hint"><i data-icon="mouse"></i><span>Tap hostile to focus</span></div><span class="foot-divider"></span><div class="key-hint"><kbd>SPACE</kbd><span>Start / pause</span></div><div class="save-status"><i data-icon="save"></i><span>Local autosave</span></div></footer>
+</main>
+<dialog id="dialog"><div class="dialog-body"><button class="dialog-close square" id="close" aria-label="Close dialog"><i data-icon="close"></i></button><div class="dialog-label"><i data-icon="sector"></i><span id="dialog-kicker">Field manual</span></div><h2 id="dialog-title"></h2><div id="dialog-content"></div><div id="dialog-buttons" class="dialog-buttons"></div></div></dialog>
+<script type="module" src="app.js"></script>
+</body>
+</html>
