@@ -1,4 +1,6 @@
 import {rangeOf} from './engine.js'
+import {levelOf,makeEnemy,positionAt} from './campaign.js'
+import {paths,rigPosition} from './research.js'
 
 const TAU=Math.PI*2
 const turn=(x,z,a)=>[x*Math.cos(a)-z*Math.sin(a),x*Math.sin(a)+z*Math.cos(a)]
@@ -136,8 +138,9 @@ function core(m,t,g,view){
   // The equatorial emitter is attached to the sphere. Its front and rear arcs
   // participate in the same depth sort as the shell and incoming hostiles.
   wedgeRing(m,0,-.044,0,1.18,1.255,.083,42,rot,'#9de4c8','#387d75',.006)
-  for(let i=0;i<3+g.damage;i++){
-    const a=rot+i*TAU/(3+g.damage)
+  const emitterCount=3+Math.min(9,g.damage)
+  for(let i=0;i<emitterCount;i++){
+    const a=rot+i*TAU/emitterCount
     const r=1.248
     crystal(m,Math.cos(a)*r,0,Math.sin(a)*r,.10,.19,4,a,['#fff0b2','#e3bc70','#907b56','#d1ac6c'])
   }
@@ -147,10 +150,26 @@ function core(m,t,g,view){
     crystal(m,0,side*1.51,0,.22,.46,6,rot,cyan)
     wedgeRing(m,0,side*1.38-.025,0,.21,.34,.05,12,rot,'#bce5ca','#4b9084',.012)
   }
+  g.rigs.forEach((rig,slot)=>{
+    const [x,y,z]=rigPosition(rig.key,rig.mount,slot)
+    const color=paths[rig.key].color
+    beamPrism(m,[x*.76,y*.76,z*.76],[x,y,z],.075,'#647f7c')
+    if(rig.key==='lance'){
+      beamPrism(m,[x*.94,y*.94,z*.94],[x*1.2,y*1.2,z*1.2],.135,'#c9ab74')
+      crystal(m,x*1.2,y*1.2,z*1.2,.1,.22,4,rot,[color,'#ecd48a','#a98249','#c6a35f'])
+    }else if(rig.key==='arc'){
+      for(const offset of [-.12,.12])crystal(m,x+offset,y+.055,z-offset,.136,.48,5,rot,cyan)
+    }else{
+      wedgeRing(m,x,y-.09,z,.12,.27,.085,8,rot,'#c5b4e8','#8f79bb',.035)
+      crystal(m,x,y+.085,z,.14,.31,5,rot,[color,'#c8b3ed','#9b8ac9','#7661a3'])
+    }
+  })
 }
 function hostile(m,e,t){
-  const baseY=e.y,size=e.kind==='heavy'?.62:e.kind==='dart'?.47:.51
-  const ang=Math.atan2(-e.z,-e.x),elev=Math.atan2(-e.y,Math.hypot(e.x,e.z))
+  const baseY=e.y,size=(e.kind==='warden'?.91:e.kind==='heavy'?.62:e.kind==='dart'?.43:.51)*(e.elite?1.18:1)
+  const ahead=positionAt(e,e.r-.06)
+  const dx=ahead.x-e.x,dy=ahead.y-e.y,dz=ahead.z-e.z
+  const ang=Math.atan2(dz,dx),elev=Math.atan2(dy,Math.hypot(dx,dz))
   const bank=.17*Math.sin(t*.67+e.spin)
   const at=(u,y,v)=>{
     const up=y*Math.cos(bank)-v*Math.sin(bank),wing=y*Math.sin(bank)+v*Math.cos(bank)
@@ -158,13 +177,36 @@ function hostile(m,e,t){
     return [x+e.x,(u*Math.sin(elev)+up*Math.cos(elev))*size+baseY,z+e.z]
   }
   const shades=e.hit>0?['#ffe7bd','#ffe1ae','#fff4db','#f2c590','#ffcf85','#fff0bb']:
+    e.kind==='warden'?['#ffe1a1','#f1af6c','#bb7955','#85594f','#926144','#ffd389']:
+    e.kind==='wisp'?['#d1c2fb','#ad91d7','#866ba8','#6e538d','#986da6','#cfb7e6']:
+    e.kind==='prism'?['#a8e4f7','#80aecf','#627caa','#565e90','#6674a6','#a6c0de']:
     e.kind==='heavy'?['#ff9869','#d35c41','#9e4637','#8c372f','#bd4837','#ec7655']:['#ff9768','#eb6a49','#c84834','#98382e','#b84432','#fe9568']
   const tip=at(1.30,-.03,0),ridge=at(-.22,.75,-.07),base=at(-.34,-.48,0),L=at(-.88,.08,.74),R=at(-.88,.08,-.74),tail=at(-1,.02,0)
   m.add([tip,ridge,L],shades[1]);m.add([tip,R,ridge],shades[0]);m.add([L,ridge,tail],shades[4]);m.add([tail,ridge,R],shades[5]);m.add([tip,L,base],shades[2]);m.add([tip,base,R],shades[3]);m.add([tail,base,L],shades[4]);m.add([tail,R,base],shades[3])
-  if(e.kind==='heavy')for(const s of [-1,1]){const wing=at(-.52,-.03,s*.88),end=at(.49,-.14,s*.65),high=at(-.36,.24,s*.58);m.add([wing,end,high],shades[0]);m.add([wing,high,s>0?L:R],shades[2])}
+  if(e.kind==='warden'){
+    const a=t*.75+e.spin
+    wedgeRing(m,e.x,e.y-.09,e.z,.50,.72,.12,6,a,'#f2be7a','#986645',.07)
+    crystal(m,e.x,e.y+.29,e.z,.31,.73,5,a,['#fff0c2','#edc27a','#cf8d56','#dca366'])
+  }
+  if(e.shield>0||e.slowTime>0||e.elite){
+    const shade=e.slowTime>0?'#baa5edb8':e.shield>0?'#a0d9ffaf':'#deb28ca8'
+    const radius=size*1.08
+    for(let i=0;i<12;i++){
+      const a=t*.4+i*TAU/12,b=a+.27
+      m.line([e.x+Math.cos(a)*radius,e.y+Math.sin(a)*radius*.53,e.z+Math.sin(a)*radius*.85],
+        [e.x+Math.cos(b)*radius,e.y+Math.sin(b)*radius*.53,e.z+Math.sin(b)*radius*.85],shade,1.15)
+    }
+  }
+  if(e.kind==='heavy'||e.kind==='warden')for(const s of [-1,1]){const wing=at(-.52,-.03,s*.88),end=at(.49,-.14,s*.65),high=at(-.36,.24,s*.58);m.add([wing,end,high],shades[0]);m.add([wing,high,s>0?L:R],shades[2])}
 }
-const previewPoints=[[-5.85,-.85,'shard'],[-3.35,-3.74,'dart'],[3.65,-3.05,'shard'],[5.7,1.37,'heavy'],[-3.46,3.05,'shard']]
-function previews(g){return previewPoints.map(([x,z,kind],i)=>({id:-i-1,x,z,y:g.sector===1?0:i===1?1.5:i===3&&g.sector===3?-1.45:0,kind,spin:i*1.2,r:Math.hypot(x,z),hp:10,maxHp:10}))}
+function makePreview(level){
+  const indices=[0,1,2,Math.floor(level.count*.46),level.count-1]
+  return [...new Set(indices)].map((index,i)=>{
+    const enemy=makeEnemy(level,index,-index-1)
+    enemy.r=5.2+(i%3)*.53
+    return Object.assign(enemy,positionAt(enemy,enemy.r))
+  })
+}
 export class World{
   constructor(canvas){
     this.canvas=canvas;this.ctx=canvas.getContext('2d');this.hitPoints=[];this.hover=0;this.camera=new OrbitCamera()
@@ -201,25 +243,35 @@ export class World{
       m.line(pointOn(range+.035,a),pointOn(range+(major?.15:.085),a),major?'#a4ccbcab':'#628a8059',major?1.4:1)
     }
     for(let i=0;i<g.axis;i++)ring(range,(i===0?1:-1)*.58,'#7aa8b458',96,.42,1)
-    const list=g.phase==='build'?previews(g):g.enemies
+    if(g.phase==='build'&&this.previewLevel!==g.level){this.previewLevel=g.level;this.preview=makePreview(levelOf(g))}
+    const list=g.phase==='build'?this.preview:g.enemies
     this.hitPoints=[]
-    const markers=[]
+    const markers=[],edgeMarkers=[]
     for(const e of list){
-      const position=[e.x,e.y,e.z],direction=unit(position)
-      if(g.phase==='build'){
-        for(let j=0;j<7;j++){
-          const length=.67+j*.19
-          m.line(position.map((v,i)=>v-direction[i]*length),position.map((v,i)=>v-direction[i]*(length+.086)),'#e18a735c',1.15)
+      const position=[e.x,e.y,e.z]
+      if(g.phase==='build'||e.id===g.target||e.id===this.hover){
+        const steps=g.phase==='build'?12:18
+        for(let j=0;j<steps;j++){
+          const r=e.r-.55-j*.14
+          if(r<1.25)break
+          const a=positionAt(e,r),b=positionAt(e,r-.072)
+          m.line([a.x,a.y,a.z],[b.x,b.y,b.z],e.id===g.target?'#e8c18bab':'#e18a735c',1.15)
         }
       }
       for(let j=0;j<3;j++){
         const d=.62+j*.27,r=.08-j*.016
-        const [x,y,z]=position.map((v,i)=>v+direction[i]*d)
+        const {x,y,z}=positionAt(e,e.r+d)
         crystal(m,x,y,z,r,r*1.6,3,e.spin+j,['#e49b73','#c37859','#aa6151'])
       }
       hostile(m,e,t)
       const [x,y]=project(...position),z=depth(...position),mag=scale/(1-z/30)
-      const size=Math.max(15,mag*.67)
+      const size=Math.max(15,mag*(e.kind==='warden'?.97:.67))
+      if(g.phase==='battle'&&(x<-3||y<-3||x>w+3||y>h+3)){
+        const dx=x-center[0],dy=y-center[1]
+        const edge=Math.min((w*.5-20)/Math.max(1,Math.abs(dx)),(dy<0?center[1]-50:h-center[1]-40)/Math.max(1,Math.abs(dy)))
+        edgeMarkers.push({e,x:center[0]+dx*edge,y:center[1]+dy*edge,angle:Math.atan2(dy,dx),depth:z})
+        continue
+      }
       // Do not select or draw a HUD bracket over a hostile hidden by the core.
       if(z<0&&Math.hypot(x-center[0],y-center[1])+size*.35<scale*CORE_RADIUS)continue
       this.hitPoints.push({id:e.id,x,y,r:Math.max(size,20),depth:z})
@@ -228,11 +280,12 @@ export class World{
     core(m,t,g,view)
     for(const shot of g.shots){
       const end=[shot.x,shot.y,shot.z]
-      const from=shot.band===0?unit(end).map(v=>v*CORE_RADIUS):[0,1.53*shot.band,0]
+      const from=shot.from
+      const tint={core:'61,216,176',lance:'241,184,103',arc:'99,226,220',gravity:'182,153,239'}[shot.color]
       const alpha=Math.max(0,shot.t/.2)
       for(let i=0;i<12;i++){
         const a=mix(from,end,i/12),b=mix(from,end,(i+1)/12)
-        m.line(a,b,'rgba(61,216,176,'+alpha*.62+')',5)
+        m.line(a,b,'rgba('+tint+','+alpha*.68+')',5)
         m.line(a,b,'rgba(224,255,224,'+alpha+')',1.7)
       }
     }
@@ -246,8 +299,17 @@ export class World{
       m.add([[p.x-r,p.y,p.z],[p.x,p.y+r,p.z],[p.x+r,p.y-r,p.z]],'#e78a67')
     }
     m.draw(c)
+    const used=[]
+    for(const marker of edgeMarkers.sort((a,b)=>a.e.r-b.e.r)){
+      const {e,x,y,angle,depth}=marker
+      if(used.some(p=>Math.hypot(p.x-x,p.y-y)<19))continue
+      used.push(marker);this.hitPoints.push({id:e.id,x,y,r:16,depth})
+      c.save();c.translate(x,y);c.rotate(angle)
+      polygon(c,[[7,0],[-5,-4],[-2,0],[-5,4]],e.id===g.target?'#ffe0a5':'#df9876')
+      c.restore()
+    }
     for(const {e,x,y,size} of markers){
-      if(e.hp<e.maxHp){
+      if(e.hp<e.maxHp||e.kind==='warden'){
         const length=size*1.1,top=y-size*.98
         c.fillStyle='#423d3e';c.fillRect(x-length/2,top,length,3)
         c.fillStyle='#f1b58a';c.fillRect(x-length/2,top,length*e.hp/e.maxHp,3)
